@@ -1,0 +1,233 @@
+#From ftp://ftp.ncbi.nlm.nih.gov/genomes/GENOME_REPORTS/ get prokaryotes.txt on 2nd april
+#Extract all mycobacterium, Mycolicibacter, Mycolicibacterium, Mycolicibacillus  and Mycobacteroides using grep
+grep 'Mycobacterium' prokaryotes.txt >>allMyco_ncbigenome_overview.txt
+grep 'Mycolicibacter' prokaryotes.txt >>allMyco_ncbigenome_overview.txt
+grep 'Mycolicibacterium' prokaryotes.txt >>allMyco_ncbigenome_overview.txt
+grep 'Mycolicibacillus' prokaryotes.txt >>allMyco_ncbigenome_overview.txt
+grep 'Mycobacteroides' prokaryotes.txt >>allMyco_ncbigenome_overview.txt
+
+#The header line of the prokaryotes file is then added back to this allMyco file
+#Have 9842 entries
+#Keep only those with less than 10 scaffolds, suggesting good assemblies
+#Have 2605 entries
+#Keep only those 1 per species or subspecies
+#Have 161 entries, 28 of which have no official species name
+#extract the ftp locations from the file and download all the sequences with wget -r
+
+#put all in 1 folder
+cd ftp.ncbi.nlm.nih.gov/genomes/all/GCA/
+for i in *;do cd $i;for j in *;do cd $j;for k in *;do cd $k;mv * ../../../../../../..;cd ..;done;cd ..;done; cd ..;done
+cd ../../../../../../..
+mkdir genbankFiles;mv GCA* genbankFiles/
+
+
+#Naming:
+#Renaming is done based upon what is in the organism name of the report file
+for i in *;do name=$(grep 'Organism name' $i/*report.txt|sed 's/# Organism name:  //g'|sed 's/ (.*//g'|sed 's/ /_/g');mv $i $name;done
+#Worked for all except GCA_002504245.1_ASM250424v1 because name is Mycobacterium_sp._3/86Rv. Manually changed to Mycobacterium_sp._3_86Rv
+#[Mycobacterium]_stephanolepidis renamed to Mycobacterium_stephanolepidis
+
+#Files renamed based on the folder name
+for i in M*;do cd $i;mv *_assembly_report.txt ${i}_assembly_report.txt; cd ..;done
+for i in M*;do cd $i;mv *_assembly_stats.txt ${i}_assembly_stats.txt; cd ..;done
+for i in M*;do cd $i;mv *_cds_from_genomic.fna.gz ${i}_cds_from_genomic.fna.gz; cd ..;done
+for i in M*;do cd $i;mv *_feature_count.txt.gz ${i}_feature_count.txt.gz; cd ..;done
+for i in M*;do cd $i;mv *_feature_table.txt.gz ${i}_feature_table.txt.gz; cd ..;done
+for i in M*;do cd $i;mv *_genomic.gbff.gz ${i}_genomic.gbff.gz; cd ..;done
+for i in M*;do cd $i;mv *_genomic.gff.gz ${i}_genomic.gff.gz; cd ..;done
+for i in M*;do cd $i;mv *_protein.faa.gz ${i}_protein.faa.gz; cd ..;done
+for i in M*;do cd $i;mv *_protein.gpff.gz ${i}_protein.gpff.gz; cd ..;done
+for i in M*;do cd $i;mv *_rna_from_genomic.fna.gz ${i}_rna_from_genomic.fna.gz; cd ..;done
+for i in M*;do cd $i;mv *_translated_cds.faa.gz ${i}_translated_cds.faa.gz; cd ..;done
+for i in M*;do cd $i;mv *_wgsmaster.gbff.gz ${i}_wgsmaster.gbff.gz; cd ..;done
+for i in M*;do cd $i;mv G*_genomic.fna.gz ${i}_genomic.fna.gz; cd ..;done
+
+
+#moved all files to the ITM server on /mnt/DATA2/conor/BCCMMycoGenomeSelection
+#run checkM on all sequences
+mkdir checkm
+cd checkm
+mkdir genomes
+for i in ../genbankFiles/*;do cp $i/*_genomic.fna.gz genomes/;done
+cd genomes
+rm *_cds_from_genomic.fna.gz  
+rm *_rna_from_genomic.fna.gz 
+
+#three names had = in them so removed that
+mv Mycolicibacterium_fortuitum_subsp._fortuitum_DSM_46621_=_ATCC_6841_genomic.fna Mycolicibacterium_fortuitum_subsp._fortuitum_DSM_46621_ATCC_6841_genomic.fna
+mv Mycolicibacterium_mageritense_DSM_44476_=_CIP_104973_genomic.fna Mycolicibacterium_mageritense_DSM_44476_CIP_104973_genomic.fna
+mv mv Mycolicibacterium_aromaticivorans_JS19b1_=_JCM_16368_genomic.fna Mycolicibacterium_aromaticivorans_JS19b1_JCM_16368_genomic.fna         
+
+
+for i in *;do 7z x $i;done
+rm *gz
+cd ..
+
+checkm lineage_wf --pplacer_threads 20 -t 20 genomes genbankMycoCheckM
+
+#Main output:
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Bin Id	Marker lineage #	genomes #	markers #	marker sets	0	1	2	3	4	5+	Completeness	Contamination	Strain heterogeneity
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Mycolicibacterium_vanbaalenii_PYR-1	o__Actinomycetales (UID1815)	120	574	266	0	572	2	0	0	0	100.00	0.10	0.00
+Mycolicibacterium_vaccae_95051	o__Actinomycetales (UID1815)	120	574	266	0	574	0	0	0	0	100.00	0.00	0.00
+Mycolicibacterium_tusciae_JS617	o__Actinomycetales (UID1808)	268	396	220	0	394	2	0	0	0	100.00	0.30	0.00
+Mycolicibacterium_senegalense	o__Actinomycetales (UID1815)	120	571	265	0	565	6	0	0	0	100.00	0.94	0.00
+Mycolicibacterium_sarraceniae	o__Actinomycetales (UID1815)	120	572	265	0	561	11	0	0	0	100.00	1.82	63.64
+Mycolicibacterium_rutilum	o__Actinomycetales (UID1808)	268	398	220	0	394	4	0	0	0	100.00	0.98	0.00
+Mycolicibacterium_psychrotolerans	o__Actinomycetales (UID1815)	120	574	266	0	571	3	0	0	0	100.00	0.37	0.00
+Mycolicibacterium_phlei	o__Actinomycetales (UID1808)	268	398	220	0	397	1	0	0	0	100.00	0.15	0.00
+Mycolicibacterium_moriokaense	o__Actinomycetales (UID1808)	268	395	220	0	395	0	0	0	0	100.00	0.00	0.00
+Mycolicibacterium_mageritense	o__Actinomycetales (UID1815)	120	574	266	0	566	7	1	0	0	100.00	2.29	10.00
+Mycolicibacterium_mageritense_DSM_44476_CIP_104973	o__Actinomycetales (UID1815)	120	574	266	0	566	7	1	0	0	100.00	2.29	10.00
+Mycolicibacterium_madagascariense	o__Actinomycetales (UID1815)	120	573	265	0	562	11	0	0	0	100.00	2.01	72.73
+Mycolicibacterium_helvum	o__Actinomycetales (UID1815)	120	572	265	0	567	5	0	0	0	100.00	0.81	20.00
+Mycolicibacterium_gilvum_PYR-GCK	o__Actinomycetales (UID1815)	120	574	266	0	573	1	0	0	0	100.00	0.38	0.00
+Mycolicibacterium_gadium	o__Actinomycetales (UID1808)	268	396	220	0	396	0	0	0	0	100.00	0.00	0.00
+Mycolicibacterium_flavescens	o__Actinomycetales (UID1808)	268	398	220	0	397	1	0	0	0	100.00	0.45	0.00
+Mycolicibacterium_confluentis	o__Actinomycetales (UID1815)	120	572	265	0	571	1	0	0	0	100.00	0.06	0.00
+Mycolicibacterium_celeriflavum	o__Actinomycetales (UID1808)	268	398	220	0	397	1	0	0	0	100.00	0.06	0.00
+Mycolicibacterium_aurum	o__Actinomycetales (UID1815)	120	574	266	0	573	1	0	0	0	100.00	0.05	0.00
+Mycolicibacterium_aubagnense	o__Actinomycetales (UID1815)	120	573	265	0	566	7	0	0	0	100.00	1.13	14.29
+Mycolicibacterium_aromaticivorans_JS19b1_JCM_16368	o__Actinomycetales (UID1815)	120	572	265	0	571	1	0	0	0	100.00	0.06	0.00
+Mycolicibacterium_anyangense	o__Actinomycetales (UID1815)	120	572	265	0	572	0	0	0	0	100.00	0.00	0.00
+Mycolicibacterium_aichiense	o__Actinomycetales (UID1815)	120	572	265	0	571	1	0	0	0	100.00	0.06	0.00
+Mycolicibacterium_agri	o__Actinomycetales (UID1808)	268	398	220	0	394	3	1	0	0	100.00	1.06	16.67
+Mycolicibacter_sinensis	o__Actinomycetales (UID1808)	268	398	220	0	397	1	0	0	0	100.00	0.15	0.00
+Mycolicibacter_algericus	o__Actinomycetales (UID1808)	268	398	220	0	397	1	0	0	0	100.00	0.15	0.00
+Mycolicibacillus_koreensis	o__Actinomycetales (UID1808)	268	398	220	0	395	3	0	0	0	100.00	1.00	33.33
+Mycobacteroides_abscessus_subsp._massiliense	g__Mycobacterium (UID1816)	100	692	300	0	692	0	0	0	0	100.00	0.00	0.00
+Mycobacteroides_abscessus_subsp._abscessus	g__Mycobacterium (UID1816)	100	693	300	0	693	0	0	0	0	100.00	0.00	0.00
+Mycobacteroides_abscessus	g__Mycobacterium (UID1816)	100	692	300	0	692	0	0	0	0	100.00	0.00	0.00
+Mycobacterium_sp._WY10	o__Actinomycetales (UID1815)	120	572	265	0	571	0	1	0	0	100.00	0.15	100.00
+Mycobacterium_sp._PYR15	o__Actinomycetales (UID1815)	120	572	265	0	571	1	0	0	0	100.00	0.38	0.00
+Mycobacterium_sp._PYR10	o__Actinomycetales (UID1815)	120	574	266	0	574	0	0	0	0	100.00	0.00	0.00
+Mycobacterium_sp._KMS	o__Actinomycetales (UID1815)	120	574	266	0	574	0	0	0	0	100.00	0.00	0.00
+Mycobacterium_sp._JS623	o__Actinomycetales (UID1808)	268	395	220	0	391	4	0	0	0	100.00	1.52	0.00
+Mycobacterium_sp._DL440	o__Actinomycetales (UID1815)	120	571	265	0	569	2	0	0	0	100.00	0.75	0.00
+Mycobacterium_sp._BK558	o__Actinomycetales (UID1815)	120	574	266	0	572	2	0	0	0	100.00	0.18	0.00
+Mycobacterium_sp._155	o__Actinomycetales (UID1815)	120	571	265	0	571	0	0	0	0	100.00	0.00	0.00
+Mycobacterium_saskatchewanense	g__Mycobacterium (UID1816)	100	693	300	0	685	8	0	0	0	100.00	1.81	0.00
+Mycobacterium_rufum	o__Actinomycetales (UID1815)	120	574	266	0	568	6	0	0	0	100.00	0.60	50.00
+Mycobacterium_paragordonae	g__Mycobacterium (UID1816)	100	692	300	0	684	8	0	0	0	100.00	0.98	0.00
+Mycobacterium_novum	o__Actinomycetales (UID1808)	268	398	220	0	394	4	0	0	0	100.00	1.06	50.00
+Mycobacterium_gallinarum	o__Actinomycetales (UID1808)	268	396	220	0	395	1	0	0	0	100.00	0.45	0.00
+Mycobacterium_branderi	o__Actinomycetales (UID1808)	268	398	220	0	396	2	0	0	0	100.00	0.61	0.00
+Mycobacterium_sp._YC-RL4	o__Actinomycetales (UID1815)	120	573	265	1	568	4	0	0	0	99.95	0.62	0.00
+Mycobacterium_tuberculosis	g__Mycobacterium (UID1816)	100	693	300	1	691	0	1	0	0	99.94	0.67	100.00
+Mycobacterium_timonense	g__Mycobacterium (UID1816)	100	693	300	1	686	6	0	0	0	99.94	0.62	50.00
+Mycobacterium_sp._TKK-01-0059	g__Mycobacterium (UID1816)	100	693	300	1	689	3	0	0	0	99.94	0.32	0.00
+Mycobacterium_sp._MOTT36Y	g__Mycobacterium (UID1816)	100	693	300	1	691	1	0	0	0	99.94	0.17	0.00
+Mycobacterium_sp._H4Y	g__Mycobacterium (UID1816)	100	693	300	1	691	1	0	0	0	99.94	0.04	0.00
+Mycobacterium_seoulense	g__Mycobacterium (UID1816)	100	693	300	1	686	6	0	0	0	99.94	1.11	66.67
+Mycobacterium_paraseoulense	g__Mycobacterium (UID1816)	100	693	300	1	690	2	0	0	0	99.94	0.44	0.00
+Mycobacterium_paraintracellulare	g__Mycobacterium (UID1816)	100	693	300	1	689	3	0	0	0	99.94	0.25	100.00
+Mycobacterium_marseillense	g__Mycobacterium (UID1816)	100	693	300	1	692	0	0	0	0	99.94	0.00	0.00
+Mycobacterium_kansasii	g__Mycobacterium (UID1816)	100	692	300	1	688	3	0	0	0	99.94	0.38	0.00	
+Mycobacterium_intracellulare_subsp._yongonense	g__Mycobacterium (UID1816)	100	693	300	1	691	1	0	0	0	99.94	0.07	0.00
+Mycobacterium_intracellulare	g__Mycobacterium (UID1816)	100	693	300	1	691	1	0	0	0	99.94	0.05	0.00
+Mycobacterium_chimaera	g__Mycobacterium (UID1816)	100	693	300	1	688	4	0	0	0	99.94	1.04	0.00
+Mycobacterium_canettii_CIPT_140010059	g__Mycobacterium (UID1816)	100	693	300	1	692	0	0	0	0	99.94	0.00	0.00
+Mycobacterium_bourgelatii	g__Mycobacterium (UID1816)	100	693	300	1	686	6	0	0	0	99.94	0.85	16.67
+Mycobacterium_avium_subsp._hominissuis	g__Mycobacterium (UID1816)	100	693	300	1	689	3	0	0	0	99.94	0.42	33.33
+Mycolicibacterium_smegmatis	o__Actinomycetales (UID1815)	120	574	266	1	571	2	0	0	0	99.94	0.50	0.00
+Mycolicibacterium_alvei	o__Actinomycetales (UID1815)	120	571	265	1	561	9	0	0	0	99.94	0.93	77.78
+Mycobacterium_grossiae	o__Actinomycetales (UID1815)	120	573	265	2	569	2	0	0	0	99.89	0.19	0.00
+Mycolicibacter_senuensis	o__Actinomycetales (UID1808)	268	398	220	1	390	6	1	0	0	99.89	0.72	77.78
+Mycobacterium_marinum	g__Mycobacterium (UID1816)	100	690	300	2	686	2	0	0	0	99.88	0.23	0.00
+Mycolicibacterium_peregrinum	o__Actinomycetales (UID1815)	120	571	265	2	567	2	0	0	0	99.86	0.50	0.00
+Mycolicibacterium_arabiense	o__Actinomycetales (UID1815)	120	573	265	2	567	4	0	0	0	99.86	0.79	25.00
+Mycobacterium_mantenii	g__Mycobacterium (UID1816)	100	693	300	2	682	8	1	0	0	99.83	1.24	27.27
+Mycobacterium_avium_subsp._avium	g__Mycobacterium (UID1816)	100	693	300	2	691	0	0	0	0	99.83	0.00	0.00
+Mycobacterium_avium	g__Mycobacterium (UID1816)	100	693	300	2	691	0	0	0	0	99.83	0.00	0.00
+Mycolicibacterium_monacense	o__Actinomycetales (UID1815)	120	574	266	1	572	1	0	0	0	99.81	0.13	100.00
+Mycolicibacterium_duvalii	o__Actinomycetales (UID1815)	120	574	266	1	572	1	0	0	0	99.81	0.38	100.00
+Mycolicibacterium_vulneris	o__Actinomycetales (UID1815)	120	571	265	1	565	5	0	0	0	99.81	1.32	20.00
+Mycolicibacterium_porcinum	o__Actinomycetales (UID1815)	120	571	265	1	565	5	0	0	0	99.81	1.32	20.00
+Mycolicibacterium_mucogenicum	o__Actinomycetales (UID1815)	120	573	265	1	567	5	0	0	0	99.81	0.55	0.00
+Mycolicibacterium_fortuitum	o__Actinomycetales (UID1815)	120	571	265	1	568	2	0	0	0	99.81	0.50	0.00
+Mycolicibacterium_boenickei	o__Actinomycetales (UID1815)	120	571	265	1	568	2	0	0	0	99.81	0.50	0.00
+Mycobacterium_sp._EPa45	o__Actinomycetales (UID1815)	120	572	265	1	570	1	0	0	0	99.81	0.06	0.00
+Mycobacterium_sp._DL99	o__Actinomycetales (UID1815)	120	571	265	1	567	3	0	0	0	99.81	1.13	0.00
+Mycobacterium_sp._DL90	o__Actinomycetales (UID1815)	120	571	265	1	564	6	0	0	0	99.81	1.36	0.00
+Mycolicibacterium_goodii	o__Actinomycetales (UID1815)	120	574	266	3	553	17	1	0	0	99.78	3.98	5.00
+Mycobacterium_basiliense	g__Mycobacterium (UID1816)	100	692	300	2	686	4	0	0	0	99.78	0.51	0.00
+Mycolicibacterium_hassiacum_DSM_44199	o__Actinomycetales (UID1808)	268	398	220	1	396	1	0	0	0	99.77	0.15	0.00
+Mycolicibacterium_sediminis	o__Actinomycetales (UID1815)	120	573	265	2	568	3	0	0	0	99.75	0.41	0.00
+Mycolicibacterium_DSM_44124	o__Actinomycetales (UID1815)	120	573	265	2	566	5	0	0	0	99.72	0.55	0.00
+Mycobacteroides_franklinii	g__Mycobacterium (UID1816)	100	693	300	1	690	2	0	0	0	99.67	0.36	0.00
+Mycobacterium_sp._AB57	g__Mycobacterium (UID1816)	100	693	300	1	688	4	0	0	0	99.67	0.66	25.00
+Mycobacterium_lacus	g__Mycobacterium (UID1816)	100	693	300	1	688	4	0	0	0	99.67	0.59	0.00
+Mycolicibacterium_insubricum	o__Actinomycetales (UID1815)	120	572	265	3	564	5	0	0	0	99.65	1.07	0.00
+Mycolicibacterium_poriferae	o__Actinomycetales (UID1815)	120	574	266	2	562	10	0	0	0	99.62	0.81	70.00
+Mycolicibacterium_litorale	o__Actinomycetales (UID1815)	120	574	266	1	567	6	0	0	0	99.62	1.88	100.00
+Mycobacterium_sp._THAF192	o__Actinomycetales (UID1815)	120	574	266	2	568	4	0	0	0	99.62	0.81	0.00
+Mycolicibacterium_neoaurum	o__Actinomycetales (UID1815)	120	572	265	1	563	8	0	0	0	99.62	1.44	0.00
+Mycobacterium_dioxanotrophicus	o__Actinomycetales (UID1815)	120	571	265	1	560	10	0	0	0	99.62	1.98	30.00
+Mycobacteroides_immunogenum	g__Mycobacterium (UID1816)	100	693	300	2	681	10	0	0	0	99.61	2.15	0.00
+Mycobacterium_stomatepiae	g__Mycobacterium (UID1816)	100	693	300	2	681	10	0	0	0	99.61	2.08	0.00
+Mycobacterium_sp._AB215	g__Mycobacterium (UID1816)	100	693	300	2	665	26	0	0	0	99.61	4.39	69.23
+Mycobacterium_sp._4858	g__Mycobacterium (UID1816)	100	693	300	2	686	5	0	0	0	99.61	1.33	20.00
+Mycobacterium_simiae	g__Mycobacterium (UID1816)	100	693	300	2	683	8	0	0	0	99.61	1.78	0.00
+Mycobacterium_pseudokansasii	g__Mycobacterium (UID1816)	100	692	300	2	688	2	0	0	0	99.61	0.40	50.00
+Mycobacterium_parmense	g__Mycobacterium (UID1816)	100	693	300	2	674	16	1	0	0	99.61	3.51	26.32
+Mycobacterium_florentinum	g__Mycobacterium (UID1816)	100	693	300	2	684	7	0	0	0	99.61	1.50	0.00
+Mycobacterium_ahvazicum	g__Mycobacterium (UID1816)	100	693	300	2	665	26	0	0	0	99.61	1.97	80.77
+Mycobacterium_sp._LNNU_331112	o__Actinomycetales (UID1746)	334	370	206	2	368	0	0	0	0	99.60	0.00	0.00
+Mycolicibacterium_chitae	g__Mycobacterium (UID1816)	100	693	300	3	682	7	1	0	0	99.58	2.17	10.00
+Mycobacterium_sp._M26	o__Actinomycetales (UID1815)	120	572	265	2	567	3	0	0	0	99.58	0.81	66.67
+Mycolicibacterium_chubuense_NBB4	o__Actinomycetales (UID1815)	120	574	266	2	571	1	0	0	0	99.56	0.05	0.00
+Mycolicibacterium_tokaiense	o__Actinomycetales (UID1815)	120	572	265	3	563	6	0	0	0	99.56	1.18	0.00
+Mycolicibacterium_murale	o__Actinomycetales (UID1815)	120	572	265	3	562	7	0	0	0	99.56	1.37	14.29
+Mycolicibacter_terrae	o__Actinomycetales (UID1808)	268	398	220	1	396	1	0	0	0	99.55	0.15	0.00
+Mycolicibacter_minnesotensis	o__Actinomycetales (UID1808)	268	398	220	1	389	8	0	0	0	99.55	1.00	75.00
+Mycolicibacter_hiberniae	o__Actinomycetales (UID1808)	268	398	220	1	395	2	0	0	0	99.55	0.61	50.00
+Mycobacterium_shimoidei	o__Actinomycetales (UID1808)	268	398	220	1	394	3	0	0	0	99.55	0.39	0.00
+Mycobacterium_noviomagense	o__Actinomycetales (UID1808)	268	398	220	1	397	0	0	0	0	99.55	0.00	0.00
+Mycobacterium_cookii	o__Actinomycetales (UID1808)	268	398	220	1	394	3	0	0	0	99.55	0.77	66.67
+Mycobacterium_sp._012931	g__Mycobacterium (UID1816)	100	692	300	3	685	4	0	0	0	99.54	0.40	0.00
+Mycobacterium_shottsii	g__Mycobacterium (UID1816)	100	690	300	3	683	4	0	0	0	99.54	0.84	50.00
+Mycobacterium_triplex	g__Mycobacterium (UID1816)	100	693	300	3	686	4	0	0	0	99.53	0.56	0.00
+Mycobacterium_lentiflavum	g__Mycobacterium (UID1816)	100	693	300	3	683	7	0	0	0	99.53	1.42	0.00
+Mycobacterium_kubicae	g__Mycobacterium (UID1816)	100	693	300	3	684	6	0	0	0	99.53	1.00	50.00
+Mycobacterium_avium_subsp._paratuberculosis	g__Mycobacterium (UID1816)	100	693	300	3	689	1	0	0	0	99.53	0.33	0.00
+Mycolicibacterium_cosmeticum	o__Actinomycetales (UID1815)	120	572	265	3	563	5	1	0	0	99.51	1.12	0.00
+Mycobacteroides_saopaulense	g__Mycobacterium (UID1816)	100	693	300	2	691	0	0	0	0	99.50	0.00	0.00
+Mycobacterium_sp._QIA-37	g__Mycobacterium (UID1816)	100	693	300	2	690	1	0	0	0	99.50	0.03	0.00
+Mycolicibacterium_hippocampi	o__Actinomycetales (UID1815)	120	574	266	3	567	4	0	0	0	99.50	0.81	75.00
+Mycobacterium_liflandii_128FXT	g__Mycobacterium (UID1816)	100	692	300	4	683	5	0	0	0	99.48	0.57	0.00
+Mycobacteroides_abscessus_subsp._bolletii	g__Mycobacterium (UID1816)	100	692	300	3	689	0	0	0	0	99.47	0.00	0.00
+Mycolicibacterium_phocaicum	o__Actinomycetales (UID1815)	120	573	265	5	566	2	0	0	0	99.40	0.19	0.00
+Mycobacteroides_salmoniphilum	g__Mycobacterium (UID1816)	100	693	300	3	689	1	0	0	0	99.39	0.03	0.00
+Mycobacterium_stephanolepidis	g__Mycobacterium (UID1816)	100	693	300	3	688	2	0	0	0	99.33	0.36	0.00
+Mycolicibacterium_thermoresistibile	o__Actinomycetales (UID1808)	268	398	220	2	396	0	0	0	0	99.32	0.00	0.00
+Mycobacterium_heidelbergense	g__Mycobacterium (UID1816)	100	693	300	3	687	3	0	0	0	99.28	0.32	0.00
+Mycobacterium_sp._ELW1	o__Actinomycetales (UID1815)	120	572	265	3	555	14	0	0	0	99.25	2.77	0.00
+Mycobacterium_sp._DL592	o__Actinomycetales (UID1815)	120	572	265	2	567	3	0	0	0	99.25	0.49	0.00
+Mycobacterium_shigaense	g__Mycobacterium (UID1816)	100	693	300	3	683	7	0	0	0	99.17	0.88	0.00	
+Mycolicibacterium_parafortuitum	o__Actinomycetales (UID1815)	120	574	266	6	568	0	0	0	0	99.15	0.00	0.00	
+Mycobacterium_haemophilum_DSM_44634	g__Mycobacterium (UID1816)	100	693	300	5	677	11	0	0	0	99.13	1.61	9.09	
+Mycobacterium_conspicuum	g__Mycobacterium (UID1816)	100	693	300	4	686	3	0	0	0	99.11	0.49	0.00	
+Mycobacterium_sp._MS1601	o__Actinomycetales (UID1815)	120	572	265	7	556	9	0	0	0	99.10	1.76	0.00	
+Mycolicibacterium_rhodesiae_NBB3	o__Actinomycetales (UID1808)	268	396	220	2	392	2	0	0	0	99.09	0.38	0.00	
+Mycobacterium_botniense	o__Actinomycetales (UID1808)	268	398	220	2	394	2	0	0	0	99.09	0.91	100.00	
+Mycolicibacterium_neworleansense	o__Actinomycetales (UID1815)	120	571	265	6	563	2	0	0	0	98.99	0.25	0.00	
+Mycolicibacterium_farcinogenes	o__Actinomycetales (UID1815)	120	571	265	8	557	6	0	0	0	98.95	0.94	0.00	
+Mycobacterium_ulcerans_subsp._shinshuense	g__Mycobacterium (UID1816)	100	692	300	6	682	4	0	0	0	98.88	0.40	0.00	
+Mycobacteroides_chelonae	g__Mycobacterium (UID1816)	100	693	300	4	688	1	0	0	0	98.83	0.03	0.00	
+Mycobacterium_asiaticum_DSM_44297	g__Mycobacterium (UID1816)	100	693	300	7	682	4	0	0	0	98.83	0.44	0.00	
+Mycobacterium_sp._SLBN-56	o__Actinomycetales (UID1593)	69	399	197	3	396	0	0	0	0	98.82	0.00	0.00	
+Mycobacterium_colombiense_CECT_3035	g__Mycobacterium (UID1816)	100	693	300	7	686	0	0	0	0	98.77	0.00	0.00	
+Mycobacterium_ulcerans	g__Mycobacterium (UID1816)	100	692	300	6	683	3	0	0	0	98.71	0.51	33.33	
+Mycolicibacterium_doricum	o__Actinomycetales (UID1815)	120	574	266	5	565	4	0	0	0	98.68	0.39	0.00	
+Mycolicibacterium_pulveris	o__Actinomycetales (UID1808)	268	398	220	3	392	3	0	0	0	98.64	1.14	0.00	
+Mycolicibacterium_fallax	o__Actinomycetales (UID1815)	120	572	265	7	560	5	0	0	0	98.64	0.36	40.00	
+Mycolicibacterium_fluoranthenivorans	o__Actinomycetales (UID1815)	120	573	265	7	561	4	1	0	0	98.63	1.38	0.00	
+Mycolicibacterium_septicum_DSM_44393	o__Actinomycetales (UID1815)	120	571	265	5	563	3	0	0	0	98.58	0.55	0.00	
+Mycobacterium_sp._3_86Rv	g__Mycobacterium (UID1816)	100	693	300	11	682	0	0	0	0	98.44	0.00	0.00	
+Mycobacterium_xenopi	o__Actinomycetales (UID1808)	268	398	220	7	386	5	0	0	0	97.93	1.29	0.00	
+Mycobacterium_shinjukuense	g__Mycobacterium (UID1816)	100	693	300	13	678	2	0	0	0	97.04	0.44	50.00	
+Mycobacterium_lepraemurium	g__Mycobacterium (UID1816)	100	693	300	19	674	0	0	0	0	96.21	0.00	0.00	
+Mycolicibacterium_fortuitum_subsp._fortuitum_DSM_46621_ATCC_6841	o__Actinomycetales (UID1815)	120	571	265	64	506	1	0	0	0	89.07	0.13	0.00	
+Mycobacterium_leprae	g__Mycobacterium (UID1816)	100	693	300	122	571	0	0	0	0	79.90	0.00	0.00	
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

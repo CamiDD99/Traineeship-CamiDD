@@ -1,0 +1,109 @@
+### Step-by-step plan for downloading the myco... genomes from ncbi and assesing quality of genome assemblies
+###############################################################################################################
+
+### STEP1
+###############################################################################################################
+
+# Downloading the prokaryotes.txt file
+wget https://ftp.ncbi.nlm.nih.gov/genomes/GENOME_REPORTS/prokaryotes.txt
+
+# Extracting all the myco... species
+grep 'Mycobacterium' prokaryotes.txt >> 1b-allMyco_ncbigenome_overview.txt
+grep 'Mycolicibacter' prokaryotes.txt >> 1b-allMyco_ncbigenome_overview.txt
+grep 'Mycolicibacterium' prokaryotes.txt >> 1b-allMyco_ncbigenome_overview.txt
+grep 'Mycolicibacillus' prokaryotes.txt >> 1b-allMyco_ncbigenome_overview.txt
+grep 'Mycobacteroides' prokaryotes.txt >> 1b-allMyco_ncbigenome_overview.txt
+
+# The header line is added to the allmyco file
+head -n 1 prokaryotes.txt > header
+cat header 1b-allMyco_ncbigenome_overview.txt > 1c-allMyco_ncbigenome_overview2.txt
+
+# Check the amount of entries --> 11423
+wc -l > 1c-allMyco_ncbigenome_overview2.txt
+ 
+# Using an R script to retain the assemblies with < 10 scaffolds (output: MycoGenomes.xlsx with 1336 (sub)species (with strains))
+Run 2a-Scaffolds.R
+
+# Since the species with their different strains were all kept in the list (MycoGenomes.xlsx) and couldn't get filtered in an automated way, 
+# for each species that had multiple different strains the best quality strain was kept. Best quality was assessed by looking at 
+# nr of scaffolds (pref <3), most recent date (= most up-to-date technique), status (ideally complete genome), ncbi search and checking 
+# to see if the strain is in sari's list.
+MycoGenomesFiltered.xlsx (255 (sub)species (with +-1 strains))
+
+# Getting the ftp url out of the filtered file so data can be downloaded with those URLs
+Run 2b-ftpURL.R
+
+# Next steps are done on the server in /mnt/DATA2/cami
+# Downloading all the sequences, moving the downloads to the correct folder and renaming folder/files using a shell script
+sh 3-down_move_rename.sh ftpURL.txt
+# Some names were not completely correct, so manually changed with mv --> then use sh rename2.sh to rename all the files correctly
+
+
+
+### STEP2
+###############################################################################################################
+
+# Doing some extra things in /mnt/DATA2/cami )
+mkdir busco
+cd busco
+mkdir genomes
+run 4-busco_prep.sh
+
+# Installing conda on server (in /mnt/DATA2/cami)
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+deactivate conda 
+# log off from server and reconnect to initiate conda correctly
+conda config --add channels defaults
+conda config --add channels conda-forge
+conda config --add channels bioconda
+
+# To check for installed channels: conda config --show channels
+# To clean extra stuff: conda clean --all
+
+# Create conda environment and activate it
+conda create --yes --name busco
+conda activate busco
+# Install busco in the busco environment
+conda install -c conda-forge -c bioconda busco=5.4.7
+
+# To be able to use --auto-lineage-prok you need sepp installed
+conda install -c bioconda sepp
+
+# Running BUSCO to check the quality of the assemblies
+# See links for information on BUSCO: 
+# https://busco.ezlab.org/busco_userguide.html#running-busco 
+# https://ucdavis-bioinformatics-training.github.io/2020-Genome_Assembly_Workshop/busco/busco
+# https://busco-archive.ezlab.org/v1/files/README.html 
+# busco -f -c 8 -m [mode] -i [sequence file]  -o [output file] -l [lineage]
+# -f = force overwriting of results files from a previous run with the same name
+# -c = integer Number of CPU threads to be used (default: 1)
+# -i = input file with sequences -> prob also all the genomic.fna files
+# -l = lineage dataset (? do I have to provide it or does busco do it since it's about bacteria, to get a list of all available datasets do: busco --list-datasets)
+# -o = specify the name of the folder that will contain the output 
+# -m = mode can be genome, proteins, transcriptome -> in this case genome since assessing quality of genome assembly
+# Do the following step in the genome folder (where you extracted the .fna.gz files)
+for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /mnt/DATA2/cami/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
+
+(Problem: File "/home/cdedecker/miniconda3/envs/busco/lib/python3.9/shutil.py", line 317, in copymode chmod_func(dst, stat.S_IMODE(st.st_mode))
+PermissionError: [Errno 1] Operation not permitted: '/mnt/DATA2/cami/busco/genomes/BUSCO-TRY1/prodigal_output/predicted_genes/predicted.faa'
+Cannot use chmod_func (file belongs to someone else -> root)
+Solution: run it on laptop)
+# Next step is done locally
+for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /home/guest/Traineeship/STEP2/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
+
+# Moving short_summary files to summary directory 
+# I am in genomes directory locally
+for i in B*;do cd $i;cp *.txt ../../BUSCO_summaries ;cd ..;done
+
+# Getting only the percentage out of the short_summary file (in BUSCO_summaries)
+sh ../../4-after_busco.sh
+
+# Open both the generated files (name.txt and percentage.txt) in excel/libreofficial and use space as delimiter
+# There will be one row wioth 255 columns -> select the complete row > edit > cut > select the space A2 > right mouse click: transpose
+# Paste columns in 1 file
+
+# Filter out all the rows that have a percentage < 95%
+# Choose one strain per subspecies
+
+
