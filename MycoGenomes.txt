@@ -1,4 +1,4 @@
-### Step-by-step plan for downloading the myco... genomes from ncbi and assesing quality of genome assemblies
+### Step-by-step plan of Genera project
 ###############################################################################################################
 
 ### STEP1
@@ -44,7 +44,7 @@ sh 3-down_move_rename.sh ftpURL.txt
 
 ### STEP2
 ###############################################################################################################
-# Doing some extra things in /mnt/DATA2/cami )
+# Doing some extra things in /mnt/DATA2/cami
 mkdir busco
 cd busco
 mkdir genomes
@@ -58,9 +58,6 @@ deactivate conda
 conda config --add channels defaults
 conda config --add channels conda-forge
 conda config --add channels bioconda
-
-# To check for installed channels: conda config --show channels
-# To clean not used files: conda clean --all
 
 # Create conda environment and activate it
 conda create --yes --name busco
@@ -89,14 +86,16 @@ busco --download bacteria_odb10
 # Do the following step in the genomes folder (where you extracted the .fna.gz files)
 for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /mnt/DATA2/cami/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
 
-(Problem: File "/home/cdedecker/miniconda3/envs/busco/lib/python3.9/shutil.py", line 317, in copymode chmod_func(dst, stat.S_IMODE(st.st_mode))
+# Problem: 
+(File "/home/cdedecker/miniconda3/envs/busco/lib/python3.9/shutil.py", line 317, in copymode chmod_func(dst, stat.S_IMODE(st.st_mode))
 PermissionError: [Errno 1] Operation not permitted: '/mnt/DATA2/cami/busco/genomes/BUSCO-TRY1/prodigal_output/predicted_genes/predicted.faa'
 Cannot use chmod_func (file belongs to someone else -> root))
 # Solution: run BUSCO on laptop
 
 # Download all the unzipped .fna files from server (using fileZilla)
 conda activate busco
-# First download lineage dataset bacteria_odb10 (in /Traineeship/Data/busco/genomes)
+
+# Download lineage dataset bacteria_odb10 (in /Traineeship/Data/busco/genomes)
 busco --download bacteria_odb10
 for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /home/guest/Traineeship/Data/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
 
@@ -116,20 +115,59 @@ sh ../../../Scripts/STEP2/4-after_busco.sh
 
 ### STEP3
 ###############################################################################################################
-# Installing mamba as package manager since it is much faster
+# Installing mamba as package manager since it is much faster (Enter > q > yes > yes)
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
 bash Mambaforge-Linux-x86_64.sh
-# Enter > q > yes > yes 
 
-# Creating conda environment to run panaroo
+# Creating conda environment and install panaroo
 conda create --yes --name panaroo
-# Installing panaroo
 mamba install -c conda-forge -c bioconda -c defaults panaroo
 
-# Running Panaroo to cluster the data (coregenome) on the server /mnt/DATA2/cami
-mkdir panaroo
-
-panaroo -i ./*.gff -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 25 -a core --core_threshold 1.0
-# Gave "Reading prokka input!" error -> need fasta seq in the gff file (once donwloaded from ncbi don't have that)
+# Running Panaroo to cluster the data/peform msa (coregenome) on the server /mnt/DATA2/cami
+mkdir /mnt/DATA2/cami/panaroo
+# Problem when testing locally: 
+"Reading prokka input!" error -> need fasta seq in the gff file (the once donwloaded from ncbi don't have that)
 # Solution: make a text file (input_file.txt) with a list with the path to the gff file and path to fasta file tab delimited
-panaroo -i input-file.txt -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 25 -a core --core_threshold 1.0
+# panaroo -i input_file.txt -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 25 -a core --core_threshold 1.0 -f 0.5
+
+# Copying the needed files to a folder on the server (/mnt/DATA2/cami/busco/)
+# Copy all the .gff files from the genbankFiles folder to /mnt/DATA2/cami/panaroo
+cd /mnt/DATA2/cami
+mkdir panaroo
+sh ../5-panaroo_prep.sh
+# Problem: not every species has a .gff file (so not every species is annotated)
+# Solution: run prokka on all the files so they are annotated the same (prokka is used since the panaroo input wants prokka annotated files)
+
+# Make new conda environment and install prokka
+conda create --yes --name prokka
+mamba install -c conda-forge -c bioconda -c defaults prokka
+
+# Copy all .fna to genomes folder in /mnt/DATA2/cami/prokka/genomes
+mkdir prokka
+cd prokka
+mkdir genomes
+cd ../busco/genomes/
+cp *.fna ../../prokka/genomes
+# Remove all .fna files that are not in the BUSCO_percentageFiltered (STEP2 folder) file
+rm <53 files>
+
+# Run prokka for all the .fna files (in /mnt/DATA2/cami/prokka/genomes)
+for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;prokka $i --cpus 8 --outdir prokka-$name --prefix $name;done
+
+# Copy the .gff files from prokka output (/mnt/DATA2/cami/prokka/genome) to /mnt/DATA2/cami/panaroo
+for i in *;do cp $!/.gff ../../../panaroo;done
+
+# Run panaroo on the prokka output gff files 
+panaroo -i *.gff -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 20 -a core --core_threshold 1.0 -f 0.5
+
+# Running RAxML-ng to build phylogenetic tree
+# Creating conda environment to run RAxML-ng and install it
+conda create --yes --name raxml-ng
+mamba install -c bioconda raxml-ng
+mkdir /mnt/DATA2/cami/raxml-ng
+
+# Checking if the input file can be read (input = core_gene_alignment.aln = output from panaroo)
+raxml-ng --check --msa core_gene_alignment.aln --model GTR+G --prefix T1
+
+# Running raxml-ng
+raxml-ng --search --site-repeat on --msa core_gene_alignment.aln --prefix <...> --threads 10 --model GTR+G 

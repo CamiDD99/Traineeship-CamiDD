@@ -3,7 +3,7 @@
 
 for i in ../genbankFiles/*
 do
-    cp $i/*_genomic.gff.gz ./
+    cp $i/*_genomic.gff.gz .
 done
 
 # Unzipping files
