@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copying the files needed for busco (run this script in busco folder)
+# Copying the files needed for busco (run this script in busco folder on the server)
 
 for i in ../genbankFiles/*
 do

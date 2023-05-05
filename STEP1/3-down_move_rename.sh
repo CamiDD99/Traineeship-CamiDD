@@ -1,5 +1,5 @@
 #!/bin/bash
-# Downloading all the sequences with wget
+# Downloading all the sequences with wget (done on server in /mnt/DATA2/cami)
 # $1 is the file with all the ftp locations
 DIR="/mnt/DATA2/cami/genbankFiles/" 
 while read LINE

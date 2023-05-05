@@ -3,8 +3,7 @@
 
 ### STEP1
 ###############################################################################################################
-
-# Downloading the prokaryotes.txt file
+# Downloading the prokaryotes.txt file (in STEP1 folder)
 wget https://ftp.ncbi.nlm.nih.gov/genomes/GENOME_REPORTS/prokaryotes.txt
 
 # Extracting all the myco... species
@@ -28,28 +27,30 @@ Run 2a-Scaffolds.R
 # for each species that had multiple different strains the best quality strain was kept. Best quality was assessed by looking at 
 # nr of scaffolds (pref <3), most recent date (= most up-to-date technique), status (ideally complete genome), ncbi search and checking 
 # to see if the strain is in sari's list.
-MycoGenomesFiltered.xlsx (255 (sub)species (with +-1 strains))
+Output: MycoGenomesFiltered.xlsx (255 (sub)species (with +-1 strain))
 
 # Getting the ftp url out of the filtered file so data can be downloaded with those URLs
 Run 2b-ftpURL.R
 
 # Next steps are done on the server in /mnt/DATA2/cami
 # Downloading all the sequences, moving the downloads to the correct folder and renaming folder/files using a shell script
+# Start screen sesssion (exit session with ctrl+a d, reopen session with screen -r download)
+screen -S download
 sh 3-down_move_rename.sh ftpURL.txt
-# Some names were not completely correct, so manually changed with mv --> then use sh rename2.sh to rename all the files correctly
+# Some names were not completely correct, so manually changed with mv
+# Then use sh rename2.sh to rename all the files correctly (in folder w-that was named incorrectly)
 
 
 
 ### STEP2
 ###############################################################################################################
-
 # Doing some extra things in /mnt/DATA2/cami )
 mkdir busco
 cd busco
 mkdir genomes
 run 4-busco_prep.sh
 
-# Installing conda on server (in /mnt/DATA2/cami)
+# Installing conda on server (in /home/cdedecker)
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
 deactivate conda 
@@ -59,16 +60,18 @@ conda config --add channels conda-forge
 conda config --add channels bioconda
 
 # To check for installed channels: conda config --show channels
-# To clean extra stuff: conda clean --all
+# To clean not used files: conda clean --all
 
 # Create conda environment and activate it
 conda create --yes --name busco
 conda activate busco
-# Install busco in the busco environment
+# Install BUSCO in the busco environment (takes a long time)
 conda install -c conda-forge -c bioconda busco=5.4.7
 
-# To be able to use --auto-lineage-prok you need sepp installed
+# To be able to use --auto-lineage-prok you need sepp and pplacer installed --> didn't work, errors
 conda install -c bioconda sepp
+# Just downloaded the bacteria_odb10 dataset (in /mnt/DATA2/cami/busco/genomes/)
+busco --download bacteria_odb10
 
 # Running BUSCO to check the quality of the assemblies
 # See links for information on BUSCO: 
@@ -79,31 +82,54 @@ conda install -c bioconda sepp
 # -f = force overwriting of results files from a previous run with the same name
 # -c = integer Number of CPU threads to be used (default: 1)
 # -i = input file with sequences -> prob also all the genomic.fna files
-# -l = lineage dataset (? do I have to provide it or does busco do it since it's about bacteria, to get a list of all available datasets do: busco --list-datasets)
+# -l = lineage dataset (bacteria_odb10, or automatically with --auto-lineage-prok)
 # -o = specify the name of the folder that will contain the output 
-# -m = mode can be genome, proteins, transcriptome -> in this case genome since assessing quality of genome assembly
-# Do the following step in the genome folder (where you extracted the .fna.gz files)
+# -m = mode can be genome, proteins, transcriptome -> in this case genome since assessing quality of genomes
+
+# Do the following step in the genomes folder (where you extracted the .fna.gz files)
 for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /mnt/DATA2/cami/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
 
 (Problem: File "/home/cdedecker/miniconda3/envs/busco/lib/python3.9/shutil.py", line 317, in copymode chmod_func(dst, stat.S_IMODE(st.st_mode))
 PermissionError: [Errno 1] Operation not permitted: '/mnt/DATA2/cami/busco/genomes/BUSCO-TRY1/prodigal_output/predicted_genes/predicted.faa'
-Cannot use chmod_func (file belongs to someone else -> root)
-Solution: run it on laptop)
-# Next step is done locally
-for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /home/guest/Traineeship/STEP2/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
+Cannot use chmod_func (file belongs to someone else -> root))
+# Solution: run BUSCO on laptop
 
-# Moving short_summary files to summary directory 
-# I am in genomes directory locally
+# Download all the unzipped .fna files from server (using fileZilla)
+conda activate busco
+# First download lineage dataset bacteria_odb10 (in /Traineeship/Data/busco/genomes)
+busco --download bacteria_odb10
+for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /home/guest/Traineeship/Data/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
+
+# Moving short_summary files to BUSCO-summaries directory  (in /Traineeship/Data/busco/genomes/)
 for i in B*;do cd $i;cp *.txt ../../BUSCO_summaries ;cd ..;done
 
-# Getting only the percentage out of the short_summary file (in BUSCO_summaries)
-sh ../../4-after_busco.sh
+# Getting only the percentage out of the short_summary file (in /Traineeship/Data/busco/BUSCO_summaries)
+sh ../../../Scripts/STEP2/4-after_busco.sh
 
-# Open both the generated files (name.txt and percentage.txt) in excel/libreofficial and use space as delimiter
-# There will be one row wioth 255 columns -> select the complete row > edit > cut > select the space A2 > right mouse click: transpose
-# Paste columns in 1 file
+# Open both the generated files (name.txt and percentage.txt) in excel/libreOffice and use space as delimiter
+# There will be one row with 255 columns -> select the complete row > edit > cut > select the space A2 > right mouse click: transpose
+# Paste columns in 1 file -> saved as BUSCO_percentage.xlsx
 
-# Filter out all the rows that have a percentage < 95%
-# Choose one strain per subspecies
+# Filter out all the rows that have a percentage < 95% and choose about one strain per subspecies -> saved in BUSCO_percentageFiltered.xlsx
 
 
+
+### STEP3
+###############################################################################################################
+# Installing mamba as package manager since it is much faster
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
+bash Mambaforge-Linux-x86_64.sh
+# Enter > q > yes > yes 
+
+# Creating conda environment to run panaroo
+conda create --yes --name panaroo
+# Installing panaroo
+mamba install -c conda-forge -c bioconda -c defaults panaroo
+
+# Running Panaroo to cluster the data (coregenome) on the server /mnt/DATA2/cami
+mkdir panaroo
+
+panaroo -i ./*.gff -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 25 -a core --core_threshold 1.0
+# Gave "Reading prokka input!" error -> need fasta seq in the gff file (once donwloaded from ncbi don't have that)
+# Solution: make a text file (input_file.txt) with a list with the path to the gff file and path to fasta file tab delimited
+panaroo -i input-file.txt -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 25 -a core --core_threshold 1.0

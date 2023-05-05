@@ -2,7 +2,7 @@
 library(xlsx)
 
 # Reading the data
-setwd("/home/guest/Traineeship/STEP1/")
+setwd("/home/guest/Traineeship/Scripts/STEP1/")
 data <- read.xlsx("MycoGenomesFiltered.xlsx", 1, header=TRUE)
 
 # Extracting the ftp URLs from the file

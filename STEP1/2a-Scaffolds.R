@@ -7,7 +7,7 @@ library(dplyr)
 library(xlsx)
 
 # Loading file
-setwd("/home/guest/Traineeship/STEP1/")
+setwd("/home/guest/Traineeship/Scripts/STEP1/")
 file <- read.csv("1d-allMyco_ncbigenome_overview3.csv", sep="\t", header=TRUE)
 
 # Retaining only those assemblies with < 10 scaffolds (3073 assemblies kept)

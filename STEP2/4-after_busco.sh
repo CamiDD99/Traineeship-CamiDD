@@ -1,5 +1,5 @@
-# Retrieving the genomes with a BUSCO score of >95%
-# I am in the BUSCO-summaries folder
+# Retrieving the percentage from the short summary file from each genome
+# I am in the BUSCO-summaries folder (/home/guest/Traineeship/Data/busco/BUSCO-summaries)
 
 NAME=$(for i in *
 do
