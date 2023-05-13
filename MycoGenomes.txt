@@ -187,7 +187,8 @@ panaroo -i *.gff -o ./panaroo_output --clean-mode strict --remove-invalid-genes 
 
 # Copy the core_gene_alignment.aln to the raxml-ng folder
 mkdir /mnt/DATA2/cami/STEP3/raxml-ng
-cp core_gene_alignment.aln 
+cd /mnt/DATA2/cami/STEP3/panaroo/panaroo_output
+cp core_gene_alignment.aln ../../raxml-ng
 
 # Running RAxML-ng to build phylogenetic tree
 # Creating conda environment to run RAxML-ng and install it
@@ -195,7 +196,12 @@ conda create --yes --name raxml-ng
 mamba install -c bioconda raxml-ng
 
 # Checking if the input file can be read (input = core_gene_alignment.aln = output from panaroo)
-raxml-ng --check --msa core_gene_alignment.aln --model GTR+G --prefix T1
+raxml-ng --check --msa core_gene_alignment.aln --model GTR+G --prefix MycoGeno
+# This made a file that was called MycoGeno.raxml.reduced.phy
+
+# Since file will be very big, best to do following command to create a binary MSA file (which can be loaded much faster than the other)
+raxml-ng --parse --msa core_gene_alignment.aln --model GTR+G --prefix MycoGeno2
+# 8 threads recommended
 
 # Running raxml-ng
-raxml-ng --search --site-repeat on --msa core_gene_alignment.aln --prefix <...> --threads 10 --model GTR+G 
+raxml-ng --search --site-repeat on --msa MycoGeno.raxml.rba --prefix MycoGeno --threads 8 --model GTR+G 
