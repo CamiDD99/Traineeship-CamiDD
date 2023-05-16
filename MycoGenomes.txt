@@ -183,12 +183,41 @@ for i in prokka-*;do cp $i/*.gff ../panaroo;done
 
 # Run panaroo on the prokka output .gff files 
 conda activate panaroo
-panaroo -i *.gff -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 20 -a core --core_threshold 1.0 -f 0.5
+panaroo -i *.gff -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 24 -a core --core_threshold 1.0 -f 0.5
 
 # Copy the core_gene_alignment.aln to the raxml-ng folder
 mkdir /mnt/DATA2/cami/STEP3/raxml-ng
 cd /mnt/DATA2/cami/STEP3/panaroo/panaroo_output
 cp core_gene_alignment.aln ../../raxml-ng
+
+#########
+# Using different tool, namely SCARAP
+#########
+cd /home/guest/Traineeship
+git clone https://github.com/SWittouck/SCARAP.git
+
+# Install all dependencies (see github)
+# Make alias in .bashrc file so you can just use scarap
+nano .bashrc
+(with the other aliases, type: alias scarap="/home/guest/Traineeship/SCARAP/src/scarap/scarap.py")
+source .bashrc
+# Run scarap in /home/guest/Traineeship/Data
+scarap core ./GenomesNCBI_faa ./core_output_scarap -t 4
+# ERROR: gene names are not unique
+
+########
+# Doing Panaroo again, but with the .gff files downloaded from ncbi (so no prokka)
+########
+# Copy all the genomic.gff and genomic.fna files to AnnotatedNCBI_gff folder
+cd /home/guest/Traineeship/Data/AnnotatedNCBI_gff
+
+# Using convert_refseq_to_prokka_gff.py script to get them in the correct format
+for i in *.gff;do name=$(echo $i | sed 's/.gff//g');python ../../Scripts/STEP3/convert_refseq_to_prokka_gff.py -g $name.gff -f $name.fna -o $name.gff3;done
+mv ./*.gff3 ../panaroo_input
+
+# Run Panaroo in panaroo_input folder
+cd ../panaroo_input
+panaroo -i *.gff3 -o ../panaroo_output --clean-mode strict --remove-invalid-genes --threads 24 -a core --core_threshold 1.0 -f 0.5
 
 # Running RAxML-ng to build phylogenetic tree
 # Creating conda environment to run RAxML-ng and install it

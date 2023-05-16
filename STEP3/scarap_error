@@ -1,0 +1,23 @@
+(scarap) [guest@fedora NTM_genomes]$ scarap core ./input_scarap ./core_output_scarap -t 4
+
+This is SCARAP version 0.4.0
+
+[16/05 16:26:56] INFO: welcome to SCARAP
+[16/05 16:26:56] INFO: creating output folder and log file
+[16/05 16:26:56] INFO: output folder './core_output_scarap' created
+[16/05 16:26:56] INFO: log file created!
+[16/05 16:26:56] INFO: welcome to the core pipeline
+[16/05 16:26:56] INFO: checking arguments other than output folder
+[16/05 16:26:56] INFO: number of seeds reduced to 12, since that's the number of genomes
+[16/05 16:26:56] INFO: checking dependencies
+[16/05 16:26:56] INFO: detected MMseqs2 version 13.45 (release unknown)
+[16/05 16:26:56] WARNING: SCARAP has only been tested with MMseqs2 releases 11, 12 and 13
+[16/05 16:26:56] INFO: detected MAFFT v7.520
+[16/05 16:26:56] INFO: selecting random seed genomes
+[16/05 16:26:56] INFO: STEP 1 - inferring pangenome of seed genomes
+[16/05 16:26:56] INFO: pangenome will be constructed with the FH strategy
+[16/05 16:26:56] INFO: 12 genomes were supplied
+[16/05 16:26:56] INFO: constructing gene table
+[16/05 16:26:56] INFO: checking if gene names are unique
+[16/05 16:26:56] ERROR: gene names are not unique
+
