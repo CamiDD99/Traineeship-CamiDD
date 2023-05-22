@@ -79,18 +79,6 @@ conda install -c bioconda sepp
 busco --download bacteria_odb10
 
 # Running BUSCO to check the quality of the assemblies
-# See links for information on BUSCO: 
-# https://busco.ezlab.org/busco_userguide.html#running-busco 
-# https://ucdavis-bioinformatics-training.github.io/2020-Genome_Assembly_Workshop/busco/busco
-# https://busco-archive.ezlab.org/v1/files/README.html 
-# busco -f -c 8 -m [mode] -i [sequence file]  -o [output file] -l [lineage]
-# -f = force overwriting of results files from a previous run with the same name
-# -c = integer Number of CPU threads to be used (default: 1)
-# -i = input file with sequences -> prob also all the genomic.fna files
-# -l = lineage dataset (bacteria_odb10, or automatically with --auto-lineage-prok)
-# -o = specify the name of the folder that will contain the output 
-# -m = mode can be genome, proteins, transcriptome -> in this case genome since assessing quality of genomes
-
 # Do the following step in the genomes folder (where you extracted the .fna.gz files)
 for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /mnt/DATA2/cami/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
 
@@ -136,6 +124,7 @@ sh ../../../Scripts/STEP2/4-histo_contigs.sh
 
 # Creating R-script to create histogram of number of contigs per species
 Run 4-barplot_contigs.R
+
 
 
 ### STEP3
@@ -190,35 +179,6 @@ mkdir /mnt/DATA2/cami/STEP3/raxml-ng
 cd /mnt/DATA2/cami/STEP3/panaroo/panaroo_output
 cp core_gene_alignment.aln ../../raxml-ng
 
-#########
-# Using different tool, namely SCARAP
-#########
-cd /home/guest/Traineeship
-git clone https://github.com/SWittouck/SCARAP.git
-
-# Install all dependencies (see github)
-# Make alias in .bashrc file so you can just use scarap
-nano .bashrc
-(with the other aliases, type: alias scarap="/home/guest/Traineeship/SCARAP/src/scarap/scarap.py")
-source .bashrc
-# Run scarap in /home/guest/Traineeship/Data
-scarap core ./GenomesNCBI_faa ./core_output_scarap -t 4
-# ERROR: gene names are not unique
-
-########
-# Doing Panaroo again, but with the .gff files downloaded from ncbi (so no prokka)
-########
-# Copy all the genomic.gff and genomic.fna files to AnnotatedNCBI_gff folder
-cd /home/guest/Traineeship/Data/AnnotatedNCBI_gff
-
-# Using convert_refseq_to_prokka_gff.py script to get them in the correct format
-for i in *.gff;do name=$(echo $i | sed 's/.gff//g');python ../../Scripts/STEP3/convert_refseq_to_prokka_gff.py -g $name.gff -f $name.fna -o $name.gff3;done
-mv ./*.gff3 ../panaroo_input
-
-# Run Panaroo in panaroo_input folder
-cd ../panaroo_input
-panaroo -i *.gff3 -o ../panaroo_output --clean-mode strict --remove-invalid-genes --threads 24 -a core --core_threshold 1.0 -f 0.5
-
 # Running RAxML-ng to build phylogenetic tree
 # Creating conda environment to run RAxML-ng and install it
 conda create --yes --name raxml-ng
@@ -231,6 +191,84 @@ raxml-ng --check --msa core_gene_alignment.aln --model GTR+G --prefix MycoGeno
 # Since file will be very big, best to do following command to create a binary MSA file (which can be loaded much faster than the other)
 raxml-ng --parse --msa core_gene_alignment.aln --model GTR+G --prefix MycoGeno2
 # 8 threads recommended
+# Don't use this file, it will filter out all the identical genomes and we don't want them filtered out
 
 # Running raxml-ng
 raxml-ng --search --site-repeat on --msa MycoGeno.raxml.rba --prefix MycoGeno --threads 8 --model GTR+G 
+## Since there were only 60 core genes when running Panaroo, the tree was run very quickly and not correct
+## Solution = to use different tool SCARAP (and also try to rerun Panaroo but not annotating with Prokka before)
+
+
+#########
+# Using different tool than Panaroo, namely SCARAP
+#########
+cd /home/cdedecker
+git clone https://github.com/SWittouck/SCARAP.git
+
+# Make conda environment and install all dependencies (see github)
+# Make alias in .bashrc file so you can just use scarap
+nano .bashrc
+(with the other aliases, type: alias scarap="/home/cdedecker/SCARAP-master/src/scarap/scarap.py")
+source .bashrc
+# Get all the .faa files in 1 folder (/mnt/DATA2/cami/STEP3/scarap_input)
+# 9 genomes did not have a .faa file (total = 205, with ITM genomes)
+
+# Run scarap in /mnt/DATA2/cami/STEP3
+scarap core ./scarap_input ./scarap_output -t 4
+
+# ERROR: gene names are not unique
+# Might be because there are spaces in the gene names
+# Possible solution: replace all spaces with _
+cd scarap_input
+for i in *;do sed -i 's/ /_/g' $i ;done
+# Was not the solution 
+# Change the name between [] at the end of each gene name to the name of the genome (done this manually for each file)
+sed -i -E 's/\[(.*?)\]/[<correct species name between brackets>]/g' <name of .faa file>
+# Solved the problem
+
+# Run scarap again
+cd ..
+scarap core ./scarap_input ./scarap_output -t 5
+
+#### Not needed anymore
+# Make one big alignment with concat function, use fna files too, so copy to a folder (scarap_input_fna)
+scarap concat ./scarap_input ./scarap_output/genes.tsv ./supermatrix -n ./scarap_input_fna -t 5
+# ERROR with genome name
+# in the genes.tsv --> the name of the genomes were *_protein and it tries to search the corresponding .fna file (but that is named *_genomic.fna) --> so .faa and .fna files should be only name of genome
+# Solution: change names from file
+for i in *_protein.faa; do name=$(echo $i | sed 's/_protein.faa//g');mv $i $name.faa ;done
+for i in *_genomic.fna; do name=$(echo $i | sed 's/_genomic.fna//g');mv $i $name.faa ;done
+# Run scarap again
+scarap core ./scarap_input ./scarap_output -t 5
+#### Not needed anymore
+
+# Run scarap concat to make alignment
+scarap concat ./scarap_input ./scarap_output/genes.tsv ./supermatrix -t 5
+
+# Copy supermatrix_aas.fasta to raxml-ng folder
+raxml-ng --search --site-repeat on --msa supermatrix_aas.fasta --prefix MycoGenomes --threads 8 --model LG+G 
+
+
+########
+# Doing Panaroo again, but with the .gff files downloaded from ncbi (so no prokka)
+# See if this changes things
+########
+# Copy all the genomic.gff and genomic.fna files to GenomesNCBI_gff folder
+cd /home/guest/Traineeship/Data/GenomesNCBI_gff
+
+# Using convert_refseq_to_prokka_gff.py script to get them in the correct format
+for i in *.gff;do name=$(echo $i | sed 's/.gff//g');python ../../Scripts/STEP3/convert_refseq_to_prokka_gff.py -g $name.gff -f $name.fna -o $name.gff3;done
+mv ./*.gff3 ../panaroo_input
+
+# Run Panaroo in panaroo_input folder
+cd ../panaroo_input
+panaroo -i *.gff3 -o ../panaroo_output --clean-mode strict --remove-invalid-genes --threads 20 -a core --core_threshold 1.0 -f 0.5
+# Gave only 66 core genes, still way to low
+### Conclusion: won't be used! SCARAP will be used to make alignment for RAxML-ng
+
+
+
+### STEP4
+###############################################################################################################
+
+
