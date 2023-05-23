@@ -270,5 +270,45 @@ panaroo -i *.gff3 -o ../panaroo_output --clean-mode strict --remove-invalid-gene
 
 ### STEP4
 ###############################################################################################################
+## Seeing which NTM genomes contain genes that are involved in MA and DIM biosynthesis (genes annotated from M. tuberculosis h37Rv)
+# Making blast db from Rv numbers found in Excel file (contains genes that are involved in MA and DIM biosynthesis)
+# First make conda environment and install blast+
+conda create --name blast
+mamba install -c bioconda blast
+
+# Search Rv numbers on Mycobrowser and download the sequences
+# Concatenate all sequences into one file
+cat Rv* > MA_DIM.fasta
+# New line on every >
+
+# Make own database with blast
+makeblastdb -in MA_DIM.fasta -title MA_DIM_db -dbtype nucl -out MA_DIM -parse_seqids
+
+# ERROR: Duplicate seq_ids are found: LCL|NC_000962.3 --> NC_000962.3 is present in all seq ids, 
+# change that to Rv id 
+# Solution: all white spaces will become _ 
+for i in *.fasta;do name=$(echo $i | sed 's/.fasta//g');sed -i "0,/NC_000962\.3/s//$name/" $i ;done
+# Remove previous big fasta file and make new one
+cat *.fasta > MA_DIM.fasta
+# New line on every >
+
+# Making blastdb
+makeblastdb -in MA_DIM.fasta -title MA_DIM_db -dbtype nucl -out MA_DIM -parse_seqids
+
+# Blast NTM genomes against the database
+# For every downloaded genome from NCBI
+for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');blastn -query $i -db db/MA_DIM -out $name.txt;done
+# For every ITM genome 
+for i in *.fna;do name=$(echo $i | sed 's/.fna//g');blastn -query $i -db db/MA_DIM -out $name.txt;done
+# File contains score (bits) and E value --> high score (says something about the sequence similarity) and low E value (nr of expected hits of similar quality that could be found just by chance) is good
+
+## Percentage horizontal gene transfer per genome
+# Data is from Conor and can be found at /mnt/DATA2/cami/HGT/NeoHGT_results/
+# Get total number of predicted HGTs after refinement
+for i in *_neoHGT;do grep "Total predicted HGTs after refinement:" $i/neoHGT_analyse.log | sed 's/Total predicted HGTs after refinement://g' | sed 's/\.//g' >> nr_pred_HGT.txt ; done
+for i in *_neoHGT;do grep ":.*proteins" $i/neoHGT_analyse.log | sed 's/proteins.//g' | sed 's/.*://g' >> total_prot.txt ; done
+# Paste both files in 1 excel file --> divide and multiply by 100 --> file is called Percentage_HGT.xlsx
+
+## Searching and using virulence, plasmid and phage finders
 
 
