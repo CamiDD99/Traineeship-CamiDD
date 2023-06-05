@@ -20,14 +20,14 @@ cat header 1b-allMyco_ncbigenome_overview.txt > 1c-allMyco_ncbigenome_overview2.
 # Check the amount of entries --> 11423
 wc -l > 1c-allMyco_ncbigenome_overview2.txt
  
-# Using an R script to retain the assemblies with < 10 scaffolds (output: MycoGenomes.xlsx with 1336 (sub)species (with strains))
+# Using an R script to retain the assemblies with < 10 scaffolds (output: MycoGenomes.xlsx with 1336 genomes of (sub)species and sometimes multiple strains per species)
 Run 2a-Scaffolds.R
 
 # Since the species with their different strains were all kept in the list (MycoGenomes.xlsx) and couldn't get filtered in an automated way, 
 # for each species that had multiple different strains the best quality strain was kept. Best quality was assessed by looking at 
 # nr of scaffolds (pref <3), most recent date (= most up-to-date technique), status (ideally complete genome), ncbi search and checking 
 # to see if the strain is in sari's list.
-Output: MycoGenomesFiltered.xlsx (255 (sub)species (with +-1 strain))
+Output: MycoGenomesFiltered.xlsx (255 genomes)
 
 # Getting the ftp url out of the filtered file so data can be downloaded with those URLs
 Run 2b-ftpURL.R
@@ -40,7 +40,7 @@ cd STEP1
 screen -S download
 sh 3-down_move_rename.sh ftpURL.txt
 # Some names were not completely correct, so manually changed with mv
-# Then use sh rename2.sh to rename all the files correctly (in folder w-that was named incorrectly)
+# Then use sh rename2.sh to rename all the files correctly (in folder that was named incorrectly)
 
 
 
@@ -74,7 +74,6 @@ conda activate busco
 conda install -c conda-forge -c bioconda busco=5.4.7
 
 # To be able to use --auto-lineage-prok you need sepp and pplacer installed --> didn't work, errors
-conda install -c bioconda sepp
 # Just downloaded the bacteria_odb10 dataset (in /mnt/DATA2/cami/busco/genomes/)
 busco --download bacteria_odb10
 
@@ -101,6 +100,7 @@ cd genomes
 
 # Download lineage dataset bacteria_odb10 (in /Traineeship/Data/busco/genomes)
 busco --download bacteria_odb10
+# Run busco locally
 for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;busco -f -c 8 -m genome -i $i -o BUSCO-$name -l /home/guest/Traineeship/Data/busco/genomes/busco_downloads/lineages/bacteria_odb10/;done
 
 # Moving short_summary files to BUSCO-summaries directory  (in /Traineeship/Data/busco/genomes/)
@@ -115,20 +115,23 @@ sh ../../../Scripts/STEP2/4-after_busco.sh
 
 # Filter out all the rows that have a percentage < 95% and choose about one strain per subspecies -> saved in BUSCO_percentageFiltered.xlsx
 
-# Making a histogram of the number of contigs per species by extracting the nr of contigs from the busco summaries
-sh ../../../Scripts/STEP2/4-histo_contigs.sh
+# Preparing to make a barplot of the number of contigs per species by extracting the nr of contigs from the busco summaries
+sh ../../../Scripts/STEP2/4-busco_contigs.sh
 # Open both the generated files (name2.txt and contigs.txt) in libreOffice and use space as delimiter
 # There will be one row with 255 columns -> select the complete row > edit > cut > select the space A2 > right mouse click: transpose
-# Paste columns in 1 file -> saved as BUSCO_contigs.xlsx
+# Paste columns in 1 file -> saved as Contigs.xlsx
 # The first name is wrong: Candidatus_Mycolicibacterium_alkanivorans.txt is now M_Mycolicibacterium_... --> changed it manually to Candidatus_M_alka...
 
-# Creating R-script to create histogram of number of contigs per species
+# R-script to create histogram of number of contigs per species
 Run 4-barplot_contigs.R
 
 
 
 ### STEP3
 ###############################################################################################################
+# Preparing folder for STEP3 (in /mnt/DATA2/cami)
+mkdir STEP3
+
 # Creating conda environment and install panaroo
 conda create --yes --name panaroo
 mamba install -c conda-forge -c bioconda -c defaults panaroo
@@ -140,7 +143,7 @@ mkdir /mnt/DATA2/cami/STEP3/panaroo
 # Solution: make a text file (input_file.txt) with a list with the path to the gff file and path to fasta file tab delimited
 # panaroo -i input_file.txt -o ./panaroo_output --clean-mode strict --remove-invalid-genes --threads 25 -a core --core_threshold 1.0 -f 0.5
 
-# Copying the needed files to a folder on the server (/mnt/DATA2/cami/STEP2/busco/)
+# Copying the needed files (.gff and .fna) to a folder on the server (/mnt/DATA2/cami/STEP2/busco/)
 # Copy all the .gff files from the genbankFiles folder to /mnt/DATA2/cami/STEP3/panaroo
 cd /mnt/DATA2/cami/STEP3/panaroo
 sh ../5-panaroo_prep.sh
@@ -165,7 +168,7 @@ for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');echo $name;prokka $i
 # Copy the .gff files from prokka output (/mnt/DATA2/cami/STEP3/prokka/genome) to /mnt/DATA2/cami/STEP3/panaroo
 for i in prokka-*;do cp $i/*.gff ../../panaroo;done
 
-# Run prokka for all the .fasta files (in /mnt/DATA2/cami/STEP3/prokka) (these are from the 16 NTM genomes that they previously sequenced and assembled)
+# Run prokka for all the .fasta files (in /mnt/DATA2/cami/STEP3/prokka) (these are the 16 NTM genomes that they previously sequenced and assembled at ITM)
 for i in *.fasta;do name=$(echo $i | sed 's/_final.fasta//g');echo $name;prokka $i --cpus 12 --outdir prokka-$name --prefix $name;done
 # Copy the .gff files from prokka output (/mnt/DATA2/cami/STEP3/prokka) to /mnt/DATA2/cami/STEP3/panaroo
 for i in prokka-*;do cp $i/*.gff ../panaroo;done
@@ -195,7 +198,7 @@ raxml-ng --parse --msa core_gene_alignment.aln --model GTR+G --prefix MycoGeno2
 
 # Running raxml-ng
 raxml-ng --search --site-repeat on --msa MycoGeno.raxml.rba --prefix MycoGeno --threads 8 --model GTR+G 
-## Since there were only 60 core genes when running Panaroo, the tree was run very quickly and not correct
+## Since there were only 60 core genes when running Panaroo, the tree was done very quickly and not correct
 ## Solution = to use different tool SCARAP (and also try to rerun Panaroo but not annotating with Prokka before)
 
 
@@ -222,12 +225,11 @@ scarap core ./scarap_input ./scarap_output -t 4
 cd scarap_input
 for i in *;do sed -i 's/ /_/g' $i ;done
 # Was not the solution 
-# Change the name between [] at the end of each gene name to the name of the genome (done this manually for each file)
+# Change the name between [] at the end of each gene name to the name of the genome (command below is done manually for each file)
 sed -i -E 's/\[(.*?)\]/[<correct species name between brackets>]/g' <name of .faa file>
 # Solved the problem
 
 # Run scarap again
-cd ..
 scarap core ./scarap_input ./scarap_output -t 5
 
 #### Not needed anymore
@@ -263,52 +265,106 @@ mv ./*.gff3 ../panaroo_input
 # Run Panaroo in panaroo_input folder
 cd ../panaroo_input
 panaroo -i *.gff3 -o ../panaroo_output --clean-mode strict --remove-invalid-genes --threads 20 -a core --core_threshold 1.0 -f 0.5
-# Gave only 66 core genes, still way to low
+# Gave only 66 core genes, still way to low (for reference SCARAP found 1413 core genes)
 ### Conclusion: won't be used! SCARAP will be used to make alignment for RAxML-ng
 
 
 
 ### STEP4
 ###############################################################################################################
+# Preparing folder for STEP4 (in /mnt/DATA2/cami)
+mkdir STEP4
+
 ## Seeing which NTM genomes contain genes that are involved in MA and DIM biosynthesis (genes annotated from M. tuberculosis h37Rv)
-# Making blast db from Rv numbers found in Excel file (contains genes that are involved in MA and DIM biosynthesis)
+# Making blast db from Rv numbers found in Excel file (MA_DIM_genes.xlsx contains genes that are involved in MA and DIM biosynthesis)
 # First make conda environment and install blast+
 conda create --name blast
 mamba install -c bioconda blast
 
-# Search Rv numbers on Mycobrowser and download the sequences
+# Search Rv numbers on Mycobrowser and download the sequences (done manually)
 # Concatenate all sequences into one file
 cat Rv* > MA_DIM.fasta
-# New line on every >
+# New line on every > (done manually)
 
 # Make own database with blast
 makeblastdb -in MA_DIM.fasta -title MA_DIM_db -dbtype nucl -out MA_DIM -parse_seqids
 
-# ERROR: Duplicate seq_ids are found: LCL|NC_000962.3 --> NC_000962.3 is present in all seq ids, 
-# change that to Rv id 
-# Solution: all white spaces will become _ 
+# ERROR: Duplicate seq_ids are found: LCL|NC_000962.3 --> NC_000962.3 is present in all seq ids
+# Solution: change NC_000692.3 to Rv id (file name)
 for i in *.fasta;do name=$(echo $i | sed 's/.fasta//g');sed -i "0,/NC_000962\.3/s//$name/" $i ;done
 # Remove previous big fasta file and make new one
 cat *.fasta > MA_DIM.fasta
-# New line on every >
+# New line on every > (done manually)
 
 # Making blastdb
 makeblastdb -in MA_DIM.fasta -title MA_DIM_db -dbtype nucl -out MA_DIM -parse_seqids
 
-# Blast NTM genomes against the database
+# Blast NTM genomes (removed all tuberculosis genomes) against the database
 # For every downloaded genome from NCBI
-for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');blastn -query $i -db db/MA_DIM -out $name.txt;done
+for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');blastn -query $i -db db/MA_DIM -out $name.txt -evalue 1e-10;done
 # For every ITM genome 
-for i in *.fna;do name=$(echo $i | sed 's/.fna//g');blastn -query $i -db db/MA_DIM -out $name.txt;done
+for i in *.fna;do name=$(echo $i | sed 's/.fna//g');blastn -query $i -db db/MA_DIM -out $name.txt -evalue 1e-10;done
 # File contains score (bits) and E value --> high score (says something about the sequence similarity) and low E value (nr of expected hits of similar quality that could be found just by chance) is good
 
-## Percentage horizontal gene transfer per genome
+# On the server, all the data will be in /mnt/DATA2/cami/STEP4/MA_DIM_genes
+# There you have 3 folders:
+#   Files which are the Rv sequences and the big concatenated fasta file
+#   db which is the blast database made of the concatenated fasta file
+#   Results which contains the .txt files with the blast results for each NTM genome
+
+# To only get the hits out of the txt files, use following commands
+for i in *.txt;do name=$(echo $i | sed 's/.txt/_Result.txt/g') ;grep "^Rv" $i > $name ;done
+
+
+## Percentage horizontal gene transfer (HGT) per genome
 # Data is from Conor and can be found at /mnt/DATA2/cami/HGT/NeoHGT_results/
 # Get total number of predicted HGTs after refinement
 for i in *_neoHGT;do grep "Total predicted HGTs after refinement:" $i/neoHGT_analyse.log | sed 's/Total predicted HGTs after refinement://g' | sed 's/\.//g' >> nr_pred_HGT.txt ; done
+# Get total number of proteins
 for i in *_neoHGT;do grep ":.*proteins" $i/neoHGT_analyse.log | sed 's/proteins.//g' | sed 's/.*://g' >> total_prot.txt ; done
-# Paste both files in 1 excel file --> divide and multiply by 100 --> file is called Percentage_HGT.xlsx
+# Paste data of both files in 1 excel file --> divide and multiply by 100 --> file is called Percentage_HGT.xlsx
 
-## Searching and using virulence, plasmid and phage finders
+
+### Using tools to find virulence factors, plasmids and prophages in NTM genomes
+## PlasForest for the prediction of plasmids
+# Installation of PlasForest 
+mkdir PlasForestFolder
+git clone https://github.com/leaemiliepradier/PlasForest.git 
+# Installed dependencies in conda environment, see github for dependencies (https://github.com/leaemiliepradier/PlasForest)
+mamba create --name plasforest
+conda activate plasforest
+# --> for scikit-learn=0.22.2.post1 do $ mamba install -c cctbx202003 scikit-learn
+
+# Untar random forest classifier
+tar -xzvf plasforest.sav.tar.gz
+
+# Download database --> might ask you a valid e-mail address + might be some missing seq it wants to download, best to choose small (100 or 50) batch size
+chmod 755 database_downloader.sh
+./database_downloader.sh
+
+# Test run it 
+./test_plasforest.sh
+
+# Running PlasForest on all files --> you have to run the PlasForest.py script in the directory where the .sav file is in, otherwise it cannot find it
+chmod 755 PlasForest.py
+for i in ../Input_PlasForest/* ;do name=$(echo $i | sed 's/_genomic.fna/_Result.csv/g' | sed 's/..\/Input_PlasForest\///g') ; ./PlasForest.py -i ../Input_PlasForest/$i -o ../Output_PlasForest/$name --threads 4 ;done
+
+# To create a summary file of all results, use PlasForest_summary.py
+
+
+## PlaSquid for the detection of plasmids
+# Installation of PlaSquid
+mkdir PlaSquidFolder
+git clone https://github.com/mgimenez720/plaSquid.git 
+# Installing dependencies in conda environement with .yml file
+mamba env create -f environments/plaSquid.yml
+
+# Run it on one sample
+nextflow run main.nf --contigs ../../PlasForestFolder/Input_PlasForest/<file name> --outdir ../Output_plaSquid/
+#! Kept on crashing, couldn't get past Minidist:Mapping
+# Only trying subworkflow and not complete workflow
+nextflow run main.nf --contigs ../../PlasForestFolder/Input_PlasForest/C* --outdir ../Output_plaSquid/ --minidist
+#! Still crashed, couldn't get past Minidist:Mapping
+
 
 
