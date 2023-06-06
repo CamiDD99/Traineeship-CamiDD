@@ -345,9 +345,11 @@ chmod 755 database_downloader.sh
 # Test run it 
 ./test_plasforest.sh
 
-# Running PlasForest on all files --> you have to run the PlasForest.py script in the directory where the .sav file is in, otherwise it cannot find it
+# Running PlasForest on all files (from NCBI) --> you have to run the PlasForest.py script in the directory where the .sav file is in, otherwise it cannot find it
 chmod 755 PlasForest.py
 for i in ../Input_PlasForest/* ;do name=$(echo $i | sed 's/_genomic.fna/_Result.csv/g' | sed 's/..\/Input_PlasForest\///g') ; ./PlasForest.py -i ../Input_PlasForest/$i -o ../Output_PlasForest/$name --threads 4 ;done
+# Running PlasForest on all files (from ITM)
+for i in ../InputITM_PlasForest/* ;do name=$(echo $i | sed 's/.fna/_Result.csv/g' | sed 's/..\/InputITM_PlasForest\///g') ; ./PlasForest.py -i ../InputITM_PlasForest/$i -o ../Output_PlasForest/$name --threads 4 ;done
 
 # To create a summary file of all results, use PlasForest_summary.py
 
