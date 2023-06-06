@@ -1,4 +1,4 @@
-## Filtering the list of Myco... genomes
+## Filtering the list of Mycogenomes
 ################################################################################
 # Downloading/loading packages
 pkg <- installed.packages()[, "Package"]
