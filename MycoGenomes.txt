@@ -306,14 +306,16 @@ for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');blastn -query $i -db
 for i in *.fna;do name=$(echo $i | sed 's/.fna//g');blastn -query $i -db db/MA_DIM -out $name.txt -evalue 1e-10;done
 # File contains score (bits) and E value --> high score (says something about the sequence similarity) and low E value (nr of expected hits of similar quality that could be found just by chance) is good
 
-# On the server, all the data will be in /mnt/DATA2/cami/STEP4/MA_DIM_genes
+# On the server, all the data is in /mnt/DATA2/cami/STEP4/MA_DIM_genes
 # There you have 3 folders:
-#   Files which are the Rv sequences and the big concatenated fasta file
-#   db which is the blast database made of the concatenated fasta file
-#   Results which contains the .txt files with the blast results for each NTM genome
+#   Files: which are the Rv sequences and the big concatenated fasta file
+#   db: which is the blast database made of the concatenated fasta file
+#   Results: which contains the .txt files with the blast results for each NTM genome
 
 # To only get the hits out of the txt files, use following commands
 for i in *.txt;do name=$(echo $i | sed 's/.txt/_Result.txt/g') ;grep "^Rv" $i > $name ;done
+
+# To create an Excel overview file of all the present/absent MA or DIM genes in the genomes, use MA_DIM_summary.py 
 
 
 ## Percentage horizontal gene transfer (HGT) per genome
