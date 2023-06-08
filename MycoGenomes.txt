@@ -125,6 +125,9 @@ sh ../../../Scripts/STEP2/4-busco_contigs.sh
 # R-script to create histogram of number of contigs per species
 Run 4-barplot_contigs.R
 
+# To make boxplot of genome sizes
+Run 4-boxplot_GenoSizes.R
+
 
 
 ### STEP3
