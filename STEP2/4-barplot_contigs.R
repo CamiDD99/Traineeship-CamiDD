@@ -7,10 +7,10 @@ setwd("/home/guest/Traineeship/Scripts/STEP2/")
 data <- read.xlsx("Contigs.xlsx",1,header=TRUE)
 
 # Barplot
-ggplot(data=data,aes(x=Organisms, y=Contigs)) +
+ggplot(data=data,aes(x=Species, y=Contigs)) +
   geom_bar(stat="identity") +
   coord_flip() +
-  ggtitle("Number of contigs per (sub)species")+
+  ggtitle("Number of contigs per genome")+
   scale_y_continuous(limits = c(0,370), expand = c(0,0)) +
   theme_bw() +
   theme(axis.text.y=element_text(size=9),
