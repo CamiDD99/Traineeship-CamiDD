@@ -320,6 +320,8 @@ for i in *.txt;do name=$(echo $i | sed 's/.txt/_Result.txt/g') ;grep "^Rv" $i > 
 
 # To create an Excel overview file of all the present/absent MA or DIM genes in the genomes, use MA_DIM_summary.py 
 
+# To create heatmap of results, use Heatmap_MADIM.R
+
 
 ## Percentage horizontal gene transfer (HGT) per genome
 # Data is from Conor and can be found at /mnt/DATA2/cami/HGT/NeoHGT_results/
@@ -330,7 +332,7 @@ for i in *_neoHGT;do grep ":.*proteins" $i/neoHGT_analyse.log | sed 's/proteins.
 # Paste data of both files in 1 excel file --> divide and multiply by 100 --> file is called Percentage_HGT.xlsx
 
 
-### Using tools to find virulence factors, plasmids and prophages in NTM genomes
+### Using tools to find virulence factors, plasmids, genomic islands and prophages in NTM genomes
 ## PlasForest for the prediction of plasmids
 # Installation of PlasForest 
 mkdir PlasForestFolder
@@ -358,20 +360,6 @@ for i in ../InputITM_PlasForest/* ;do name=$(echo $i | sed 's/.fna/_Result.csv/g
 
 # To create a summary file of all results, use PlasForest_summary.py
 
-
-## PlaSquid for the detection of plasmids
-# Installation of PlaSquid
-mkdir PlaSquidFolder
-git clone https://github.com/mgimenez720/plaSquid.git 
-# Installing dependencies in conda environement with .yml file
-mamba env create -f environments/plaSquid.yml
-
-# Run it on one sample
-nextflow run main.nf --contigs ../../PlasForestFolder/Input_PlasForest/<file name> --outdir ../Output_plaSquid/
-#! Kept on crashing, couldn't get past Minidist:Mapping
-# Only trying subworkflow and not complete workflow
-nextflow run main.nf --contigs ../../PlasForestFolder/Input_PlasForest/C* --outdir ../Output_plaSquid/ --minidist
-#! Still crashed, couldn't get past Minidist:Mapping
 
 
 
