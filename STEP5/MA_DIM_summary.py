@@ -1,4 +1,5 @@
 import openpyxl
+import openpyxl.styles as styles
 import os
 
 # Path to the directory containing the .txt files
@@ -30,6 +31,11 @@ species_names = [filename[:-11] for filename in os.listdir(txt_files_dir) if fil
 for i, species_name in enumerate(species_names):
     results_sheet.cell(row=2, column=i + 2, value=species_name)
 
+# Creating cell style --> no value in cell, means light red background color
+red_fill = styles.PatternFill(fill_type="solid", fgColor="F7D1D5")
+no_style = styles.NamedStyle(name="no_value")
+no_style.fill = red_fill
+
 # Iterate over the .txt files and update the corresponding cells in the results sheet
 for i, rv_number in enumerate(rv_numbers):
     for j, species_name in enumerate(species_names):
@@ -40,6 +46,7 @@ for i, rv_number in enumerate(rv_numbers):
                     results_sheet.cell(row=i + 3, column=j + 2, value='yes')
                 else:
                     results_sheet.cell(row=i + 3, column=j + 2, value='no')
+                    results_sheet.cell(row=i + 3, column=j + 2).style = no_style
 
 # Save the results workbook as MA_DIM_Results.xlsx
-results_workbook.save('MA_DIM_Results.xlsx')
+results_workbook.save('/home/guest/Traineeship/Scripts/STEP5/MA_DIM_Results.xlsx')
