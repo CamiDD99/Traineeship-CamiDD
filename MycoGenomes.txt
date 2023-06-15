@@ -361,5 +361,21 @@ for i in ../InputITM_PlasForest/* ;do name=$(echo $i | sed 's/.fna/_Result.csv/g
 # To create a summary file of all results, use PlasForest_summary.py
 
 
+## PHASTER for the detection of prophage regions
+for i in *.fna;do name=$(echo $i | sed 's/_genomic.fna//g');wget --post-file=$i "http://phaster.ca/phaster_api?contigs=1" -O ../Output_phaster/PHASTER-$name;done
+# This will create a file with the name PHASTER-$name where you can find the job ID and the status. In this case, the status was 1083 submissions ahead of you. So it will take a very long time to generate the data.
 
+# Output in terminal looks like this:
+'''
+--2023-06-14 09:44:33--  http://phaster.ca/phaster_api?contigs=1
+Resolving phaster.ca (phaster.ca)... 104.21.12.29, 172.67.131.234, 2606:4700:3037::6815:c1d, ...
+Connecting to phaster.ca (phaster.ca)|104.21.12.29|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [application/json]
+Saving to: ‘../Output_phaster/PHASTER-Mycolicibacter_virginiensis’
+
+../Output_phaster/PHASTER-Mycoli     [ <=>                                                    ]      72  --.-KB/s    in 0s      
+
+2023-06-14 09:44:39 (13.7 MB/s) - ‘../Output_phaster/PHASTER-Mycolicibacter_virginiensis’ saved [72]
+'''
 
